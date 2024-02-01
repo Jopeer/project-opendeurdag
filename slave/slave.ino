@@ -1,6 +1,7 @@
 #include <Wire.h>
 
-const int led = 12;
+// geen delays bij de slave!
+
 const int adress = 3;
 
 struct
@@ -8,24 +9,31 @@ struct
     int ButtonPin[4];
     int button;
     int line;
+    bool wasPressed;
 } Button;
 
 void setup()
 {
     Serial.begin(9600);
-    pinMode(led, OUTPUT);
 
     Wire.begin(adress);
     Wire.onReceive(receiveEvent);
+    Wire.onRequest(requestEvent);
+
+    for (int i = 3; i < 13; i++)
+    {
+        pinMode(Button.ButtonPin[i], INPUT);
+    }
 }
 
 void loop()
 {
+    // if buttonPressed => buttonPressed();
 }
 
 void receiveEvent(int numBytes)
 {
-    switch (Wire.read()) //de eerste byte bepaald het doel van de boodschap
+    switch (Wire.read()) // de eerste byte bepaald het doel van de boodschap
     {
     case 0:
         receiveButton();
@@ -33,37 +41,59 @@ void receiveEvent(int numBytes)
 
     case 1:
         reset();
+        break;
+
+    case 2:
+        gameEnd();
+        break;
     }
 }
 
 void receiveButton()
 {
-    int line = Wire.read();
-    int button = Wire.read();
+    Button.line = Wire.read();
+    Button.button = Wire.read();
 
-    Serial.println("line: ");
-    Serial.print(line);
-    Serial.println("button: ");
-    Serial.print(button);
+    light(Button.line, Button.button, true);
+}
 
-    Button.line = line;
-    Button.button = button;
-
-    digitalWrite(led, HIGH);
-
-    light(line, button, true);
+void requestEvent()
+{
+    Wire.write(Button.wasPressed);
+    if (Button.wasPressed)
+    {
+        Button.wasPressed = false; // de drukknop terug op false zetten voor de volgende
+    }
 }
 
 void buttonPressed() // word opgeroepen als de juiste knop ingedrukt wordt
 {
     light(Button.line, Button.button, false); // ingedrukte knop uitzetten
+    Button.wasPressed = true;
 }
 
 void light(int line, int button, bool ledON)
 {
 }
+
 void reset()
 {
     Serial.print("reset");
-    digitalWrite(led, LOW);
+}
+
+void gameEnd()
+{
+    switch (Wire.read())
+    {
+    case true:
+        /* gewonne */
+        unsigned long completionTime = Wire.read();
+
+        break;
+
+    case false:
+        /* verloren */
+        Wire.read(); // clear buffer
+        break;
+    }
 }
