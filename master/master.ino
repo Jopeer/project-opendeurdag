@@ -19,7 +19,7 @@ struct
     int line;
     int arduino;
     bool wasPressed;
-} Button;
+} ButtonToPress;
 
 void setup()
 {
@@ -28,13 +28,13 @@ void setup()
 
     for (int i = 3; i < 13; i++)
     {
-        pinMode(Button.ButtonPin[i], INPUT);
+        pinMode(ButtonToPress.ButtonPin[i], INPUT);
     }
 }
 
 void loop()
 {
-    if (wasButtonPressed(Button.arduino))
+    if (wasButtonPressed(ButtonToPress.arduino))
     {
         gameButtonProgression += 1;
         randButton();
@@ -59,8 +59,8 @@ void randButton()
     {
     case 0:
 
-        Button.line = line;
-        Button.button = button;
+        ButtonToPress.line = line;
+        ButtonToPress.button = button;
         light(line, button, true);
 
         break;
@@ -87,7 +87,7 @@ bool wasButtonPressed(int arduino)
     switch (arduino)
     {
     case 0:
-        return Button.wasPressed;
+        return ButtonToPress.wasPressed;
 
         break;
 
@@ -125,8 +125,8 @@ void sendGameEnd(bool hasWon, unsigned long completionTime)
 
 void buttonPressed() // word opgeroepen als de juiste knop ingedrukt wordt
 {
-    light(Button.line, Button.button, false); // ingedrukte knop uitzetten
-    Button.wasPressed = true;
+    light(ButtonToPress.line, ButtonToPress.button, false); // ingedrukte knop uitzetten
+    ButtonToPress.wasPressed = true;
 }
 
 void reset()

@@ -10,7 +10,7 @@ struct
     int button;
     int line;
     bool wasPressed;
-} Button;
+} ButtonToPress;
 
 void setup()
 {
@@ -22,7 +22,7 @@ void setup()
 
     for (int i = 3; i < 13; i++)
     {
-        pinMode(Button.ButtonPin[i], INPUT);
+        pinMode(ButtonToPress.ButtonPin[i], INPUT);
     }
 }
 
@@ -51,25 +51,25 @@ void receiveEvent(int numBytes)
 
 void receiveButton()
 {
-    Button.line = Wire.read();
-    Button.button = Wire.read();
+    ButtonToPress.line = Wire.read();
+    ButtonToPress.button = Wire.read();
 
-    light(Button.line, Button.button, true);
+    light(ButtonToPress.line, ButtonToPress.button, true);
 }
 
 void requestEvent()
 {
-    Wire.write(Button.wasPressed);
-    if (Button.wasPressed)
+    Wire.write(ButtonToPress.wasPressed);
+    if (ButtonToPress.wasPressed)
     {
-        Button.wasPressed = false; // de drukknop terug op false zetten voor de volgende
+        ButtonToPress.wasPressed = false; // de drukknop terug op false zetten voor de volgende
     }
 }
 
 void buttonPressed() // word opgeroepen als de juiste knop ingedrukt wordt
 {
-    light(Button.line, Button.button, false); // ingedrukte knop uitzetten
-    Button.wasPressed = true;
+    light(ButtonToPress.line, ButtonToPress.button, false); // ingedrukte knop uitzetten
+    ButtonToPress.wasPressed = true;
 }
 
 void light(int line, int button, bool ledON)
