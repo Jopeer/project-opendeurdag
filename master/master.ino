@@ -58,10 +58,10 @@ void loop()
     // gameEnd(true);
 
     sendButton(1, 0, 0);
-    while (wasButtonPressed(1))
-    {
-        delay(100);
-    }
+    // while (wasButtonPressed(1))
+    // {
+    //     delay(100);
+    // }
 }
 
 void randButton()
@@ -120,6 +120,18 @@ bool wasButtonPressed(int arduino)
 
 void light(int line, int button, bool ledON)
 {
+switch (line)
+    {
+    case 0:
+        ledLine0.setPixelColor(button, 255, 0, 0);
+        ledLine0.show();
+        break;
+
+    case 1:
+        ledLine1.setPixelColor(button, 255, 0, 0);
+        ledLine1.show();
+        break;
+    }
     
 }
 

@@ -39,10 +39,10 @@ void setup()
 void loop()
 {
     // if buttonPressed => buttonPressed();
-    if (!digitalRead(ButtonToPress.ButtonPin[ButtonToPress.button]))
-    {
-        buttonPressed();
-    }
+    // if (!digitalRead(ButtonToPress.ButtonPin[ButtonToPress.button]))
+    // {
+    //     buttonPressed();
+    // }
     
 }
 
