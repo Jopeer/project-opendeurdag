@@ -1,20 +1,21 @@
+#include <Adafruit_NeoPixel.h>
 #include <Wire.h>
 
-const int knop = 2;
-const int led = 3;
+Adafruit_NeoPixel ledLine0(5, A0, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel ledLine1(5, A1, NEO_GRB + NEO_KHZ800);
 
 const int gameButtons = 10; // aantal knoppen per game
-int gameButtonProgression;
 
 unsigned long currentMillis;
 unsigned long previousMillis;
+unsigned long GameStartMillis;     // de tijd wanneer een nieuw spel gestart is
 unsigned long MaxplayTime = 30000; // de max tijd om een knop in te drukken [ms]
 
 int Slave_A = 3; // adress van de slave
 
 struct
 {
-    int ButtonPin[4];
+    int ButtonPin[9];
     int button;
     int line;
     int arduino;
@@ -34,18 +35,32 @@ void setup()
 
 void loop()
 {
-    if (wasButtonPressed(ButtonToPress.arduino))
+    // sendButton(1, 0, 4); // startknop
+    // while (wasButtonPressed(1))
+    // {
+    //     // wachtanimatie
+    //     delay(100);
+    // }
+    // GameStartMillis = millis();
+    // for (int i = 0; i < gameButtons; i++)
+    // {
+    //     randButton();
+    //     while (!wasButtonPressed(ButtonToPress.arduino))
+    //     {
+
+    //         if (millis() - GameStartMillis >= MaxplayTime)
+    //         {
+    //             gameEnd(false); // verloren
+    //             return;
+    //         }
+    //     }
+    // }
+    // gameEnd(true);
+
+    sendButton(1, 0, 0);
+    while (wasButtonPressed(1))
     {
-        gameButtonProgression += 1;
-        randButton();
-    }
-    if (millis() - previousMillis >= MaxplayTime)
-    {
-        gameEnd(false);
-    }
-    if (gameButtonProgression == gameButtons)
-    {
-        gameEnd(true);
+        delay(100);
     }
 }
 
@@ -76,7 +91,7 @@ void randButton()
 void sendButton(int arduino, int line, int button)
 {
     Wire.beginTransmission(Slave_A);
-    Wire.write(0); // stuur het doel van de boodschap
+    Wire.write(0); // case 0: receiveButton() (zie slave)
     Wire.write(line);
     Wire.write(button);
     Wire.endTransmission();
@@ -105,13 +120,7 @@ bool wasButtonPressed(int arduino)
 
 void light(int line, int button, bool ledON)
 {
-}
-
-void sendReset(int slaveAdress)
-{
-    Wire.beginTransmission(slaveAdress);
-    Wire.write(1); // case 1: reset() (zie slave)
-    Wire.endTransmission();
+    
 }
 
 void sendGameEnd(bool hasWon, unsigned long completionTime)
@@ -123,6 +132,16 @@ void sendGameEnd(bool hasWon, unsigned long completionTime)
     Wire.endTransmission();
 }
 
+void sendLight(int line, int button, bool ledON)
+{
+    Wire.beginTransmission(Slave_A);
+    Wire.write(1); // case 1 light() (zie slave)
+    Wire.write(line);
+    Wire.write(button);
+    Wire.write(ledON);
+    Wire.endTransmission();
+}
+
 void buttonPressed() // word opgeroepen als de juiste knop ingedrukt wordt
 {
     light(ButtonToPress.line, ButtonToPress.button, false); // ingedrukte knop uitzetten
@@ -131,11 +150,18 @@ void buttonPressed() // word opgeroepen als de juiste knop ingedrukt wordt
 
 void reset()
 {
-    sendReset(Slave_A);
+    for (int i = 0; i < 2; i++)
+    {
+        for (int j = 0; j < 10; j++)
+        {
+            light(i, j, false);
+            sendLight(i, j, false);
+        }
+    }
 }
 
 void gameEnd(bool hasWon)
 {
-    sendGameEnd(hasWon, millis() - previousMillis);
+    sendGameEnd(hasWon, millis() - GameStartMillis);
     reset();
 }
