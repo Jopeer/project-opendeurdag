@@ -1,8 +1,8 @@
 #include <Adafruit_NeoPixel.h>
 #include <Wire.h>
 
-Adafruit_NeoPixel ledLine0(5, A0, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel ledLine1(5, A1, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel ledStrip0(5, A0, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel ledStrip1(5, A1, NEO_GRB + NEO_KHZ800);
 
 const int gameButtons = 10; // aantal knoppen per game
 
@@ -15,7 +15,7 @@ int Slave_A = 3; // adress van de slave
 
 struct
 {
-    int ButtonPin[9];
+    int ButtonPin[10];
     int button;
     int line;
     int arduino;
@@ -25,51 +25,75 @@ struct
 void setup()
 {
     Serial.begin(9600);
+    ledStrip0.begin();
+    ledStrip1.begin();
     Wire.begin();
 
-    for (int i = 3; i < 13; i++)
+    for (int j = 0; j < 2; j++)
     {
-        pinMode(ButtonToPress.ButtonPin[i], INPUT);
+        for (int i = 2; i <= 7; i++)
+        {
+            ButtonToPress.ButtonPin[i - 2 + 5 * j] = i + (5 * j);
+            pinMode(ButtonToPress.ButtonPin[i - 2 + 5 * j], INPUT);
+        }
     }
 }
 
 void loop()
 {
+    Serial.println("begin");
     // sendButton(1, 0, 4); // startknop
     // while (wasButtonPressed(1))
     // {
     //     // wachtanimatie
     //     delay(100);
     // }
-    // GameStartMillis = millis();
-    // for (int i = 0; i < gameButtons; i++)
-    // {
-    //     randButton();
-    //     while (!wasButtonPressed(ButtonToPress.arduino))
-    //     {
+    ButtonToPress.button = 3;
+    ButtonToPress.line = 0;
+    light(ButtonToPress.line, ButtonToPress.button, true);
+    while (!wasButtonPressed(ButtonToPress.arduino))
+    {
+        // wachtanimatie
+        if (digitalRead(ButtonToPress.ButtonPin[ButtonToPress.button + 5 * ButtonToPress.line]))
+        {
+            buttonPressed();
+        }
+        delay(100);
+    }
+    ButtonToPress.wasPressed = false;
+    Serial.print("pressed");
 
-    //         if (millis() - GameStartMillis >= MaxplayTime)
-    //         {
-    //             gameEnd(false); // verloren
-    //             return;
-    //         }
-    //     }
-    // }
-    // gameEnd(true);
+    GameStartMillis = millis();
+    for (int i = 0; i < gameButtons; i++)
+    {
+        randButton();
+        while (!wasButtonPressed(ButtonToPress.arduino))
+        {
+            if (digitalRead(ButtonToPress.ButtonPin[ButtonToPress.button + 5 * ButtonToPress.line]))
+            {
+                Serial.print("pressed");
+                buttonPressed();
+            }
 
-    sendButton(1, 0, 0);
-    // while (wasButtonPressed(1))
-    // {
-    //     delay(100);
-    // }
+            if (millis() - GameStartMillis >= MaxplayTime)
+            {
+                gameEnd(false); // verloren
+                return;
+            }
+        }
+        ButtonToPress.wasPressed = false;
+    }
+    gameEnd(true);
 }
 
 void randButton()
 {
-    int arduino = random(0, 1);
-    int line = random(0, 1);
+    // int arduino = random(0, 1);
+    // int line = random(0, 1);
+    int arduino = 0;
+    int line = 0;
     int button = random(0, 5);
-
+    Serial.println(button);
     switch (arduino)
     {
     case 0:
@@ -120,19 +144,33 @@ bool wasButtonPressed(int arduino)
 
 void light(int line, int button, bool ledON)
 {
-switch (line)
+    switch (line)
     {
     case 0:
-        ledLine0.setPixelColor(button, 255, 0, 0);
-        ledLine0.show();
+        // code lampen op line 0 te laten branden
+        if (ledON == true)
+        {
+            ledStrip0.setPixelColor(button, ledStrip0.Color(0, 225, 0));
+        }
+        else
+        {
+            ledStrip0.setPixelColor(button, ledStrip0.Color(0, 0, 0));
+        }
+        ledStrip0.show();
         break;
-
     case 1:
-        ledLine1.setPixelColor(button, 255, 0, 0);
-        ledLine1.show();
+        // code lampen op line 1 te laten branden
+        if (ledON == true)
+        {
+            ledStrip1.setPixelColor(button, ledStrip1.Color(0, 225, 0));
+        }
+        else
+        {
+            ledStrip1.setPixelColor(button, ledStrip1.Color(0, 0, 0));
+        }
+        ledStrip1.show();
         break;
     }
-    
 }
 
 void sendGameEnd(bool hasWon, unsigned long completionTime)
