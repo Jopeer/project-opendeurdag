@@ -4,6 +4,7 @@
 Adafruit_NeoPixel ledStrip0(5, A0, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel ledStrip1(5, A1, NEO_GRB + NEO_KHZ800);
 
+const int testButton = A2;
 const int gameButtons = 10; // aantal knoppen per game
 
 unsigned long currentMillis;
@@ -25,10 +26,14 @@ struct
 void setup()
 {
     Serial.begin(9600);
+    // Wire.begin();
+
     ledStrip0.begin();
     ledStrip1.begin();
-    Wire.begin();
 
+    randomSeed(analogRead(A2));
+
+    pinMode(testButton, INPUT_PULLUP);
     for (int j = 0; j < 2; j++)
     {
         for (int i = 2; i <= 7; i++)
@@ -41,24 +46,19 @@ void setup()
 
 void loop()
 {
-    Serial.println("begin");
-    // sendButton(1, 0, 4); // startknop
-    // while (wasButtonPressed(1))
-    // {
-    //     // wachtanimatie
-    //     delay(100);
-    // }
-    ButtonToPress.button = 3;
+    light(ButtonToPress.line, ButtonToPress.button, false);
+    light(0, 1, true);
+
+    ButtonToPress.button = 1;
     ButtonToPress.line = 0;
     light(ButtonToPress.line, ButtonToPress.button, true);
     while (!wasButtonPressed(ButtonToPress.arduino))
     {
-        // wachtanimatie
         if (digitalRead(ButtonToPress.ButtonPin[ButtonToPress.button + 5 * ButtonToPress.line]))
         {
             buttonPressed();
         }
-        delay(100);
+        delay(10);
     }
     ButtonToPress.wasPressed = false;
     Serial.print("pressed");
@@ -77,21 +77,27 @@ void loop()
 
             if (millis() - GameStartMillis >= MaxplayTime)
             {
-                gameEnd(false); // verloren
+                // gameEnd(false); // verloren
                 return;
             }
+
+            if (!digitalRead(testButton))
+            {
+                test_Buttons();
+            }
+            
         }
         ButtonToPress.wasPressed = false;
     }
-    gameEnd(true);
+    // gameEnd(true);
 }
 
 void randButton()
 {
     // int arduino = random(0, 1);
-    // int line = random(0, 1);
+
     int arduino = 0;
-    int line = 0;
+    int line = random(0, 1);
     int button = random(0, 5);
     Serial.println(button);
     switch (arduino)
@@ -106,19 +112,10 @@ void randButton()
 
     case 1:
 
-        sendButton(arduino, line, button);
+        // sendButton(arduino, line, button);
 
         break;
     }
-}
-
-void sendButton(int arduino, int line, int button)
-{
-    Wire.beginTransmission(Slave_A);
-    Wire.write(0); // case 0: receiveButton() (zie slave)
-    Wire.write(line);
-    Wire.write(button);
-    Wire.endTransmission();
 }
 
 bool wasButtonPressed(int arduino)
@@ -172,26 +169,6 @@ void light(int line, int button, bool ledON)
         break;
     }
 }
-
-void sendGameEnd(bool hasWon, unsigned long completionTime)
-{
-    Wire.beginTransmission(Slave_A);
-    Wire.write(2); // case 2: gameEnd() (zie slave)
-    Wire.write(hasWon);
-    Wire.write(completionTime);
-    Wire.endTransmission();
-}
-
-void sendLight(int line, int button, bool ledON)
-{
-    Wire.beginTransmission(Slave_A);
-    Wire.write(1); // case 1 light() (zie slave)
-    Wire.write(line);
-    Wire.write(button);
-    Wire.write(ledON);
-    Wire.endTransmission();
-}
-
 void buttonPressed() // word opgeroepen als de juiste knop ingedrukt wordt
 {
     light(ButtonToPress.line, ButtonToPress.button, false); // ingedrukte knop uitzetten
@@ -205,13 +182,57 @@ void reset()
         for (int j = 0; j < 10; j++)
         {
             light(i, j, false);
-            sendLight(i, j, false);
+            // sendLight(i, j, false);
         }
     }
 }
 
 void gameEnd(bool hasWon)
 {
-    sendGameEnd(hasWon, millis() - GameStartMillis);
+    // sendGameEnd(hasWon, millis() - GameStartMillis);
     reset();
 }
+
+void test_Buttons()
+{
+    for (int j = 0; j < 2; j++)
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            light(j, i, true);
+            while (!digitalRead(ButtonToPress.ButtonPin[i + 5 * j]))
+            {
+                delay(10);
+            }
+            light(j, i, false);
+        }
+    }
+}
+
+// void sendButton(int arduino, int line, int button)
+// {
+//     Wire.beginTransmission(Slave_A);
+//     Wire.write(0); // case 0: receiveButton() (zie slave)
+//     Wire.write(line);
+//     Wire.write(button);
+//     Wire.endTransmission();
+// }
+
+// void sendGameEnd(bool hasWon, unsigned long completionTime)
+// {
+//     Wire.beginTransmission(Slave_A);
+//     Wire.write(2); // case 2: gameEnd() (zie slave)
+//     Wire.write(hasWon);
+//     Wire.write(completionTime);
+//     Wire.endTransmission();
+// }
+
+// void sendLight(int line, int button, bool ledON)
+// {
+//     Wire.beginTransmission(Slave_A);
+//     Wire.write(1); // case 1 light() (zie slave)
+//     Wire.write(line);
+//     Wire.write(button);
+//     Wire.write(ledON);
+//     Wire.endTransmission();
+// }
