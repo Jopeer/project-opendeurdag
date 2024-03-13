@@ -3,8 +3,15 @@
 Adafruit_NeoPixel ledStrip0(5, A0, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel ledStrip1(5, A1, NEO_GRB + NEO_KHZ800);
 
+// parameters:
+int beginBadButtons = 0;
+int maxBadButtons = 2;             // maximum aantal slechte knoppen
+int diffecultyChangeInterval = 10; // #rondes voor de moeilijkheidsgraad verhoogd
+int beginWaitTime = 1500;          // de startwachttijd [ms]
+int WaitTimeChangeRate = 250;      // #ms waarmee de wachttijd tussen rondes afneemd per interval [ms].
+//
+
 const int testButton = A2;
-const int gameButtons = 10; // aantal knoppen per game
 
 unsigned long currentMillis;
 unsigned long previousMillis;
@@ -19,6 +26,8 @@ const int buttonStatesSize = 5;
 
 int playerScore_0;
 int playerScore_1;
+int badButtons = beginBadButtons;
+int waitTime = beginWaitTime;
 bool buttonPressed;
 
 enum ButtonState
@@ -53,17 +62,30 @@ void setup()
 
 void loop()
 {
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < diffecultyChangeInterval; i++)
     {
-        randButtonStates(0);
+        randButtonStates(badButtons);
         light();
         while (!buttonPressed)
         {
-            delay(10);
+            delay(5);
             readButtons();
         }
         buttonPressed = false;
-        delay(2000);
+        delay(waitTime);
+    }
+    increaceDifficulty();
+}
+
+void increaceDifficulty()
+{
+    if (badButtons < maxBadButtons)
+    {
+        badButtons++;
+    }
+    if (waitTime - WaitTimeChangeRate > 0)
+    {
+        waitTime -= 250;
     }
 }
 
