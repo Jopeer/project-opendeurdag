@@ -145,14 +145,14 @@ void badButtonPressed(int player)
         ledStrip0.clear();
         break;
     }
-    Serial.println("score player 0: " + playerScore_0);
-    Serial.println("score player 1: " + playerScore_1);
+    Serial.println("score player 0: " + String(playerScore_0));
+    Serial.println("score player 1: " + String(playerScore_1));
 
     ledStrip0.show();
     ledStrip1.show();
 }
 
-void randButtonStates(int NumBadButtons) // vul de array buttonStates met statussen
+void randButtonStates(int NumBadButtons) // vul de array "buttonStates" met statussen
 {
     for (int i = 0; i < buttonStatesSize; i++) // volledige array nul maken
     {
@@ -165,7 +165,8 @@ void randButtonStates(int NumBadButtons) // vul de array buttonStates met status
     int badButton;
     for (int i = 0; i < NumBadButtons; i++)
     {
-        while (badButton = buttonToPress) // slechte knop mag niet de goede vervangen
+        badButton = random(0, 5);
+        while (badButton == buttonToPress) // slechte knop mag niet de goede vervangen
         {
             badButton = random(0, 5);
         }
