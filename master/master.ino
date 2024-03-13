@@ -1,5 +1,4 @@
 #include <Adafruit_NeoPixel.h>
-#include <Wire.h>
 
 Adafruit_NeoPixel ledStrip0(5, A0, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel ledStrip1(5, A1, NEO_GRB + NEO_KHZ800);
@@ -12,21 +11,26 @@ unsigned long previousMillis;
 unsigned long GameStartMillis;     // de tijd wanneer een nieuw spel gestart is
 unsigned long MaxplayTime = 30000; // de max tijd om een knop in te drukken [ms]
 
-int Slave_A = 3; // adress van de slave
+int ButtonPins[10]; // array met de pinnen van elke knop
+const int ButtonPinsSize = 10;
 
-struct
+int ButtonStates[5]; // array met de statusen van elke knop: (0 = uit, 1 = slecht, 2 = goed)
+const int buttonStatesSize = 5;
+
+int playerScore_0;
+int playerScore_1;
+bool buttonPressed;
+
+enum ButtonState
 {
-    int ButtonPin[10];
-    int button;
-    int line;
-    int arduino;
-    bool wasPressed;
-} ButtonToPress;
+    off,
+    bad,
+    good
+};
 
 void setup()
 {
     Serial.begin(9600);
-    // Wire.begin();
 
     ledStrip0.begin();
     ledStrip1.begin();
@@ -34,205 +38,180 @@ void setup()
     randomSeed(analogRead(A2));
 
     pinMode(testButton, INPUT_PULLUP);
-    for (int j = 0; j < 2; j++)
+    for (int line = 0; line <= 1; line++)
     {
-        for (int i = 2; i <= 7; i++)
+        for (int button = 0; button < 5; button++)
         {
-            ButtonToPress.ButtonPin[i - 2 + 5 * j] = i + (5 * j);
-            pinMode(ButtonToPress.ButtonPin[i - 2 + 5 * j], INPUT);
+            ButtonPins[button + 5 * line] = (button + 5 * line) + 2; // geeft elke knop je juiste pin, +2 omdat pin 0,1 niet gaan
+            pinMode(ButtonPins[button + 5 * line], INPUT);           // zet elke pin op input
+
+            Serial.println("knop: " + String(button + 5 * line) +
+                           " zit op pin: " + String((button + 5 * line) + 2));
         }
     }
 }
 
 void loop()
 {
-    light(ButtonToPress.line, ButtonToPress.button, false);
-    light(0, 1, true);
-
-    ButtonToPress.button = 1;
-    ButtonToPress.line = 0;
-    light(ButtonToPress.line, ButtonToPress.button, true);
-    while (!wasButtonPressed(ButtonToPress.arduino))
+    for (int i = 0; i < 10; i++)
     {
-        if (digitalRead(ButtonToPress.ButtonPin[ButtonToPress.button + 5 * ButtonToPress.line]))
+        randButtonStates(0);
+        light();
+        while (!buttonPressed)
         {
-            buttonPressed();
+            delay(10);
+            readButtons();
         }
-        delay(10);
+        buttonPressed = false;
+        delay(2000);
     }
-    ButtonToPress.wasPressed = false;
-    Serial.print("pressed");
+}
 
-    GameStartMillis = millis();
-    for (int i = 0; i < gameButtons; i++)
+void readButtons()
+{
+    for (int button = 0; button < 5; button++)
     {
-        randButton();
-        while (!wasButtonPressed(ButtonToPress.arduino))
+        for (int line = 0; line < 2; line++)
         {
-            if (digitalRead(ButtonToPress.ButtonPin[ButtonToPress.button + 5 * ButtonToPress.line]))
+            checkButtonState(button, line);
+            if (buttonPressed)
             {
-                Serial.print("pressed");
-                buttonPressed();
-            }
-
-            if (millis() - GameStartMillis >= MaxplayTime)
-            {
-                // gameEnd(false); // verloren
                 return;
             }
-
-            if (!digitalRead(testButton))
-            {
-                test_Buttons();
-            }
-            
         }
-        ButtonToPress.wasPressed = false;
     }
-    // gameEnd(true);
 }
 
-void randButton()
+void checkButtonState(int button, int line)
 {
-    // int arduino = random(0, 1);
 
-    int arduino = 0;
-    int line = random(0, 1);
-    int button = random(0, 5);
-    Serial.println(button);
-    switch (arduino)
+    if (digitalRead(ButtonPins[button + 5 * line]))
+    {
+        switch (ButtonStates[button])
+        {
+        case off:
+            break;
+
+        case bad:
+            badButtonPressed(line);
+            break;
+
+        case good:
+            goodButtonPressed(line);
+            break;
+        }
+    }
+}
+
+void goodButtonPressed(int player)
+{
+    buttonPressed = true;
+    switch (player)
     {
     case 0:
-
-        ButtonToPress.line = line;
-        ButtonToPress.button = button;
-        light(line, button, true);
-
+        playerScore_0 += 1;
+        ledStrip0.fill(ledStrip0.Color(0, 255, 0));
+        ledStrip1.clear();
         break;
 
     case 1:
-
-        // sendButton(arduino, line, button);
-
+        playerScore_1 += 1;
+        ledStrip1.fill(ledStrip0.Color(0, 255, 0));
+        ledStrip0.clear();
         break;
     }
+
+    Serial.println("score player 0: " + String(playerScore_0));
+    Serial.println("score player 1: " + String(playerScore_1));
+
+    ledStrip0.show();
+    ledStrip1.show();
 }
 
-bool wasButtonPressed(int arduino)
+void badButtonPressed(int player)
 {
-    switch (arduino)
+    buttonPressed = true;
+    switch (player)
     {
     case 0:
-        return ButtonToPress.wasPressed;
-
+        playerScore_0 -= 1;
+        ledStrip0.fill(ledStrip0.Color(255, 0, 0));
+        ledStrip1.clear();
         break;
 
     case 1:
-
-        Wire.requestFrom(Slave_A, 1);
-        while (!Wire.available())
-        {
-        }
-        return Wire.read();
-
+        playerScore_1 -= 1;
+        ledStrip1.fill(ledStrip1.Color(255, 0, 0));
+        ledStrip0.clear();
         break;
     }
+    Serial.println("score player 0: " + playerScore_0);
+    Serial.println("score player 1: " + playerScore_1);
+
+    ledStrip0.show();
+    ledStrip1.show();
 }
 
-void light(int line, int button, bool ledON)
+void randButtonStates(int NumBadButtons) // vul de array buttonStates met statussen
 {
-    switch (line)
+    for (int i = 0; i < buttonStatesSize; i++) // volledige array nul maken
     {
-    case 0:
-        // code lampen op line 0 te laten branden
-        if (ledON == true)
-        {
-            ledStrip0.setPixelColor(button, ledStrip0.Color(0, 225, 0));
-        }
-        else
-        {
-            ledStrip0.setPixelColor(button, ledStrip0.Color(0, 0, 0));
-        }
-        ledStrip0.show();
-        break;
-    case 1:
-        // code lampen op line 1 te laten branden
-        if (ledON == true)
-        {
-            ledStrip1.setPixelColor(button, ledStrip1.Color(0, 225, 0));
-        }
-        else
-        {
-            ledStrip1.setPixelColor(button, ledStrip1.Color(0, 0, 0));
-        }
-        ledStrip1.show();
-        break;
+        ButtonStates[i] = 0;
     }
-}
-void buttonPressed() // word opgeroepen als de juiste knop ingedrukt wordt
-{
-    light(ButtonToPress.line, ButtonToPress.button, false); // ingedrukte knop uitzetten
-    ButtonToPress.wasPressed = true;
-}
 
-void reset()
-{
-    for (int i = 0; i < 2; i++)
+    int buttonToPress = random(0, 5); // kies een knop om in te drukken
+    ButtonStates[buttonToPress] = good;
+
+    int badButton;
+    for (int i = 0; i < NumBadButtons; i++)
     {
-        for (int j = 0; j < 10; j++)
+        while (badButton = buttonToPress) // slechte knop mag niet de goede vervangen
         {
-            light(i, j, false);
-            // sendLight(i, j, false);
+            badButton = random(0, 5);
         }
+        ButtonStates[badButton] = bad;
     }
 }
 
-void gameEnd(bool hasWon)
+void light()
 {
-    // sendGameEnd(hasWon, millis() - GameStartMillis);
-    reset();
-}
+    ledStrip0.clear();
+    ledStrip1.clear();
 
-void test_Buttons()
-{
-    for (int j = 0; j < 2; j++)
+    for (int i = 0; i < buttonStatesSize; i++)
     {
-        for (int i = 0; i < 5; i++)
+        switch (ButtonStates[i])
         {
-            light(j, i, true);
-            while (!digitalRead(ButtonToPress.ButtonPin[i + 5 * j]))
-            {
-                delay(10);
-            }
-            light(j, i, false);
+        case off:
+            break;
+
+        case bad:
+            ledStrip0.setPixelColor(i, ledStrip0.Color(225, 0, 0));
+            ledStrip1.setPixelColor(i, ledStrip1.Color(225, 0, 0));
+            break;
+
+        case good:
+            ledStrip0.setPixelColor(i, ledStrip0.Color(0, 225, 0));
+            ledStrip1.setPixelColor(i, ledStrip1.Color(0, 225, 0));
+            break;
         }
     }
+    ledStrip0.show();
+    ledStrip1.show();
 }
 
-// void sendButton(int arduino, int line, int button)
+// void test_Buttons()
 // {
-//     Wire.beginTransmission(Slave_A);
-//     Wire.write(0); // case 0: receiveButton() (zie slave)
-//     Wire.write(line);
-//     Wire.write(button);
-//     Wire.endTransmission();
-// }
-
-// void sendGameEnd(bool hasWon, unsigned long completionTime)
-// {
-//     Wire.beginTransmission(Slave_A);
-//     Wire.write(2); // case 2: gameEnd() (zie slave)
-//     Wire.write(hasWon);
-//     Wire.write(completionTime);
-//     Wire.endTransmission();
-// }
-
-// void sendLight(int line, int button, bool ledON)
-// {
-//     Wire.beginTransmission(Slave_A);
-//     Wire.write(1); // case 1 light() (zie slave)
-//     Wire.write(line);
-//     Wire.write(button);
-//     Wire.write(ledON);
-//     Wire.endTransmission();
+//     for (int j = 0; j < 2; j++)
+//     {
+//         for (int i = 0; i < 5; i++)
+//         {
+//             light(j, i, true);
+//             while (!digitalRead(ButtonToPress.ButtonPin[i + 5 * j]))
+//             {
+//                 delay(10);
+//             }
+//             light(j, i, false);
+//         }
+//     }
 // }
