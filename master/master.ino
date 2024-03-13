@@ -56,9 +56,6 @@ void setup()
         {
             ButtonPins[button + 5 * line] = (button + 5 * line) + 2; // geeft elke knop je juiste pin, +2 omdat pin 0,1 niet gaan
             pinMode(ButtonPins[button + 5 * line], INPUT);           // zet elke pin op input
-
-            Serial.println("knop: " + String(button + 5 * line) +
-                           " zit op pin: " + String((button + 5 * line) + 2));
         }
     }
 }
@@ -89,7 +86,7 @@ void loop()
             {
                 badButtonPressed(2); // case 2 bijde spelers te traag
                 health -= 1;
-                Serial.println("health: " + String(health));
+                // Serial.println("health: " + String(health));
             }
         }
         buttonPressed = false;
@@ -112,12 +109,14 @@ void WaitForGameBegin()
             {
                 light();
                 previousHoldMillis = millis();
+                Serial.println("START"); // voor communicatie
             }
         }
         else
         {
             blink();
             previousHoldMillis = millis();
+            Serial.println("STOP_PREMATURE"); // voor communicatie
         }
     }
 }
@@ -210,8 +209,10 @@ void goodButtonPressed(int player)
         break;
     }
 
-    Serial.println("score player 0: " + String(playerScore_0));
-    Serial.println("score player 1: " + String(playerScore_1));
+    Serial.print("P1:"); // voor communicatie
+    Serial.println(playerScore_0);
+    Serial.print("P2:");
+    Serial.println(playerScore_1);
 
     ledStrip0.show();
     ledStrip1.show();
@@ -238,8 +239,11 @@ void badButtonPressed(int player)
         ledStrip0.fill(ledStrip0.Color(255, 0, 0));
         ledStrip1.fill(ledStrip1.Color(255, 0, 0));
     }
-    Serial.println("score player 0: " + String(playerScore_0));
-    Serial.println("score player 1: " + String(playerScore_1));
+
+    Serial.print("P1:"); // voor communicatie
+    Serial.println(playerScore_0);
+    Serial.print("P2:");
+    Serial.println(playerScore_1);
 
     ledStrip0.show();
     ledStrip1.show();
@@ -325,6 +329,7 @@ void GameEnd()
         ledStrip1.show();
         delay(700);
     }
+    Serial.println("STOP_GAME"); //voor communicatie
 }
 
 void blink()
