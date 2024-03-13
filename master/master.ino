@@ -4,19 +4,21 @@ Adafruit_NeoPixel ledStrip0(5, A0, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel ledStrip1(5, A1, NEO_GRB + NEO_KHZ800);
 
 // parameters:
-int beginBadButtons = 0;
+int BeginHealth = 5;               // hoevaak de spelers een knop mogen misse door tijdsdruk
+int beginBadButtons = 0;           // #slechte knoppen aan het begin van het spel
 int maxBadButtons = 2;             // maximum aantal slechte knoppen
 int diffecultyChangeInterval = 10; // #rondes voor de moeilijkheidsgraad verhoogd
 int beginWaitTime = 1500;          // de startwachttijd [ms]
 int WaitTimeChangeRate = 250;      // #ms waarmee de wachttijd tussen rondes afneemd per interval [ms].
+unsigned long BeginMaxReactionTime = 10000;
+unsigned long ReactionTimeChangeRate = 500;
 //
 
 const int testButton = A2;
 
 unsigned long currentMillis;
 unsigned long previousMillis;
-unsigned long GameStartMillis;     // de tijd wanneer een nieuw spel gestart is
-unsigned long MaxplayTime = 30000; // de max tijd om een knop in te drukken [ms]
+unsigned long maxReactionTime = BeginMaxReactionTime;
 
 int ButtonPins[10]; // array met de pinnen van elke knop
 const int ButtonPinsSize = 10;
@@ -28,6 +30,7 @@ int playerScore_0;
 int playerScore_1;
 int badButtons = beginBadButtons;
 int waitTime = beginWaitTime;
+int health = BeginHealth;
 bool buttonPressed;
 
 enum ButtonState
@@ -62,19 +65,77 @@ void setup()
 
 void loop()
 {
+    gameReset();
+    light();
+    WaitForGameBegin();
+
     for (int i = 0; i < diffecultyChangeInterval; i++)
     {
+        if (health == 0)
+        {
+            GameEnd();
+            return;
+        }
+
         randButtonStates(badButtons);
         light();
+
+        previousMillis = millis();
         while (!buttonPressed)
         {
-            delay(5);
             readButtons();
+
+            if (millis() - previousMillis >= maxReactionTime)
+            {
+                badButtonPressed(2); // case 2 bijde spelers te traag
+                health -= 1;
+                Serial.println("health: " + String(health));
+            }
         }
         buttonPressed = false;
         delay(waitTime);
     }
     increaceDifficulty();
+}
+
+void WaitForGameBegin()
+{
+    unsigned long previousHoldMillis = 0;
+    while (millis() - previousHoldMillis <= 3000)
+    {
+        if ((digitalRead(ButtonPins[0]) &&
+             digitalRead(ButtonPins[4]) &&
+             digitalRead(ButtonPins[5]) &&
+             digitalRead(ButtonPins[9])))
+        {
+            if (previousHoldMillis == 0)
+            {
+                light();
+                previousHoldMillis = millis();
+            }
+        }
+        else
+        {
+            blink();
+            previousHoldMillis = millis();
+        }
+    }
+}
+
+void gameReset()
+{
+    maxReactionTime = BeginMaxReactionTime;
+    badButtons = beginBadButtons;
+    waitTime = beginWaitTime;
+    health = BeginHealth;
+    buttonPressed = false;
+
+    for (int i = 0; i < buttonStatesSize; i++)
+    {
+        ButtonStates[i] = 0;
+    }
+    ButtonStates[0] = good;
+    ButtonStates[4] = good;
 }
 
 void increaceDifficulty()
@@ -87,6 +148,12 @@ void increaceDifficulty()
     {
         waitTime -= 250;
     }
+    if (maxReactionTime - ReactionTimeChangeRate > 0)
+    {
+        maxReactionTime -= ReactionTimeChangeRate;
+    }
+
+    health = BeginHealth;
 }
 
 void readButtons()
@@ -166,6 +233,10 @@ void badButtonPressed(int player)
         ledStrip1.fill(ledStrip1.Color(255, 0, 0));
         ledStrip0.clear();
         break;
+
+    case 2: // als bijde speler niet op tijd op de knop drukken
+        ledStrip0.fill(ledStrip0.Color(255, 0, 0));
+        ledStrip1.fill(ledStrip1.Color(255, 0, 0));
     }
     Serial.println("score player 0: " + String(playerScore_0));
     Serial.println("score player 1: " + String(playerScore_1));
@@ -221,6 +292,50 @@ void light()
     }
     ledStrip0.show();
     ledStrip1.show();
+}
+
+void GameEnd()
+{
+    for (int i = 0; i < 15; i++)
+    {
+        if (playerScore_0 > playerScore_1)
+        {
+
+            ledStrip0.fill(ledStrip0.Color(0, 255, 0));
+            ledStrip1.fill(ledStrip1.Color(255, 0, 0));
+        }
+        else if (playerScore_0 < playerScore_1)
+        {
+
+            ledStrip0.fill(ledStrip0.Color(255, 0, 0));
+            ledStrip1.fill(ledStrip1.Color(0, 255, 0));
+        }
+        else // gelijkspel
+        {
+
+            ledStrip0.fill(ledStrip0.Color(0, 255, 0));
+            ledStrip1.fill(ledStrip1.Color(0, 255, 0));
+        }
+        ledStrip0.show();
+        ledStrip1.show();
+        delay(700);
+        ledStrip0.clear();
+        ledStrip1.clear();
+        ledStrip0.show();
+        ledStrip1.show();
+        delay(700);
+    }
+}
+
+void blink()
+{
+    light();
+    delay(700);
+    ledStrip0.clear();
+    ledStrip1.clear();
+    ledStrip0.show();
+    ledStrip1.show();
+    delay(500);
 }
 
 // void test_Buttons()
